@@ -23,11 +23,35 @@ namespace StorageApi.Controllers
             _context = context;
         }
 
+        // GET: api/Products/stats
+        [HttpGet("stats")]
+        public async Task<ActionResult<ProductStatsDto>> GetProductStats()
+        {
+            var products = await _context.Product.ToListAsync();
+
+            var stats = new ProductStatsDto
+            {
+                TotalCount = products.Count,
+                TotalInventoryValue = products.Sum(p => p.Price * p.Count),
+                AveragePrice = products.Count > 0 ? products.Average(p => p.Price) : 0
+            };
+
+            return stats;
+        }
+
         // GET: api/Products
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<ProductDto>>> GetProduct()
+        public async Task<ActionResult<IEnumerable<ProductDto>>> GetProduct([FromQuery] string? category, [FromQuery] string? name)
         {
-            return await _context.Product
+            var query = _context.Product.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(category))
+                query = query.Where(p => p.Category == category);
+
+            if (!string.IsNullOrWhiteSpace(name))
+                query = query.Where(p => p.Name.Contains(name));
+
+            return await query
                 .Select(p => new ProductDto
                 {
                     Id = p.Id,
